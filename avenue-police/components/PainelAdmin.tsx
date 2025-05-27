@@ -39,6 +39,7 @@ import { useAuth } from "../contexts/AuthContext"
 import { criminalArticles, type CriminalArticle } from "../types/criminal-articles"
 import type { Usuario } from "../types/auth"
 import { db } from "../lib/database"
+import { supabase } from "../lib/supabaseClient" // ajuste o caminho conforme seu projeto
 import Image from "next/image"
 
 interface PainelAdminProps {
@@ -875,14 +876,25 @@ export default function PainelAdmin({ onVoltar }: PainelAdminProps) {
                         ref={fileInputRef}
                         onChange={async (e) => {
                           const file = e.target.files?.[0]
-                          if (file) {
-                            const reader = new FileReader()
-                            reader.onload = (ev) => {
+                          if (file && editandoUsuario) {
+                            // Caminho único para cada usuário
+                            const ext = file.name.split('.').pop()
+                            const path = `usuarios/${editandoUsuario.id}/avatar.${ext}`
+
+                            // Upload para o bucket 'avatars'
+                            const { error } = await supabase.storage
+                              .from('avatars')
+                              .upload(path, file, { upsert: true })
+
+                            if (!error) {
+                              // Pega a URL pública
+                              const { data } = supabase.storage.from('avatars').getPublicUrl(path)
                               setEditandoUsuario((prev) =>
-                                prev ? { ...prev, foto: ev.target?.result as string } : prev
+                                prev ? { ...prev, foto: data.publicUrl } : prev
                               )
+                            } else {
+                              showNotification("erro", "Erro ao enviar imagem")
                             }
-                            reader.readAsDataURL(file)
                           }
                         }}
                       />
@@ -940,37 +952,26 @@ export default function PainelAdmin({ onVoltar }: PainelAdminProps) {
                     </div>
                   </div>
                   {/* Campo para senha atual */}
-                  <div className="space-y-2">
-                    <Label className="text-white">Digite a senha atual para confirmar</Label>
+                  <div className="space-y-2">o} className="bg-[#26C6DA] hover:bg-[#26C6DA]/80 text-black">
+                    <Label className="text-white">Digite a senha atual para confirmar</Label>className="h-4 w-4 mr-2" />
                     <Input
-                      type="password"
+                      type="password"n>
                       value={senhaAtual}
-                      onChange={e => setSenhaAtual(e.target.value)}
+                      onChange={e => setSenhaAtual(e.target.value)}tEditandoUsuario(null)}
                       className="bg-gray-800 border-gray-600 text-white"
-                      placeholder="Senha atual"
+                      placeholder="Senha atual" className="bg-red-600 hover:bg-red-700 border-red-600 text-white"
                     />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={salvarEdicaoUsuario} className="bg-[#26C6DA] hover:bg-[#26C6DA]/80 text-black">
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar
-                    </Button>
-                    <Button
+                  </div>r
+                  <div className="flex gap-2">tton>
+                    <Button onClick={salvarEdicaoUsuario} className="bg-green-600 hover:bg-green-700">
+                      <Save className="h-4 w-4 mr-2" />dContent>
+                      Salvarrd>
+                    </Button>v>
+                    <Button</div>
                       onClick={() => setEditandoUsuario(null)}
-                      variant="outline"
-                      className="bg-red-600 hover:bg-red-700 border-red-600 text-white"
-                    >
-                      Cancelar
+                      variant="outline"v>
+                      className="bg-red-600 hover:bg-red-700 border-red-600 text-white" </div>
+                    > )
+                      Cancelar}
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// CREATE INDEX IF NOT EXISTS idx_usuarios_criado_em ON usuarios (criado_em DESC);

@@ -75,7 +75,6 @@ export const usuarioService = {
   },
 
   async update(id: string, updates: Partial<DatabaseUsuario>): Promise<DatabaseUsuario> {
-    console.log("Campos enviados para update:", updates)
     const { data, error } = await supabase
       .from("usuarios")
       .update({
