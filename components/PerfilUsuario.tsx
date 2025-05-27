@@ -30,16 +30,24 @@ export default function PerfilUsuario({ onVoltar }: PerfilUsuarioProps) {
   const [salvando, setSalvando] = useState(false)
 
   const patentes = [
+    "Aluno",
     "Soldado",
     "Cabo",
-    "Sargento",
+    "3°Sargento",
+    "2°Sargento",
+    "1°Sargento",
     "Subtenente",
-    "Tenente",
+    "2°Tenente",
+    "1°Tenente",
     "Capitão",
     "Major",
     "Tenente-Coronel",
     "Coronel",
+    "Supervisor Regional",
+    "Supervisor Geral",
+    "Sub-Comando Geral",
     "Comando Geral",
+
   ]
 
   const showNotification = (tipo: "sucesso" | "erro", mensagem: string) => {

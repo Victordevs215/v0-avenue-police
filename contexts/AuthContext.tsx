@@ -11,6 +11,12 @@ import bcrypt from 'bcryptjs'
 import { usuarioService } from '../lib/supabase'
 import { db } from '@/lib/database'
 import type { Usuario } from '@/types/auth'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 interface AuthContextType {
   usuario: Usuario | null
@@ -52,11 +58,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const setupRealtimeListeners = () => {
+    if (typeof window === 'undefined') return
+
+    const canal = supabase
+      .channel('public:usuarios')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'usuarios' },
+        (payload) => {
+          window.dispatchEvent(new CustomEvent('avenue_usuarios_changed', { detail: payload }))
+        }
+      )
+      .subscribe()
+
     const handleUsuarioChange = (event: any) => {
       console.log('🔄 Usuário alterado em tempo real:', event.detail)
       setSyncStatus('syncing')
 
-      if (usuario && event.detail.new && event.detail.new.id === usuario.id) {
+      const usuarioAtual = JSON.parse(sessionStorage.getItem('usuario_logado') || '{}')
+
+      if (usuarioAtual && event.detail.new && event.detail.new.id === usuarioAtual.id) {
         const updatedUser: Usuario = {
           id: event.detail.new.id,
           nome: event.detail.new.nome,
@@ -69,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           criadoEm: event.detail.new.criado_em,
           ativo: event.detail.new.ativo,
         }
+
         setUsuario(updatedUser)
         sessionStorage.setItem('usuario_logado', JSON.stringify(updatedUser))
       }
@@ -76,18 +98,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTimeout(() => setSyncStatus('online'), 1000)
     }
 
-    const handlePrisaoChange = (event: any) => {
-      console.log('🔄 Prisão alterada em tempo real:', event.detail)
-      setSyncStatus('syncing')
-      setTimeout(() => setSyncStatus('online'), 1000)
-    }
-
     window.addEventListener('avenue_usuarios_changed', handleUsuarioChange)
-    window.addEventListener('avenue_prisoes_changed', handlePrisaoChange)
 
     return () => {
       window.removeEventListener('avenue_usuarios_changed', handleUsuarioChange)
-      window.removeEventListener('avenue_prisoes_changed', handlePrisaoChange)
+      supabase.removeChannel(canal)
     }
   }
 

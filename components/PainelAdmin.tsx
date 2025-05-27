@@ -1,12 +1,24 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useRef } from "react"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   ArrowLeft,
@@ -21,6 +33,7 @@ import {
   Eye,
   EyeOff,
   Wifi,
+  Camera,
 } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
 import { criminalArticles, type CriminalArticle } from "../types/criminal-articles"
@@ -56,6 +69,9 @@ export default function PainelAdmin({ onVoltar }: PainelAdminProps) {
     tipo: null,
     mensagem: "",
   })
+  const [editandoUsuario, setEditandoUsuario] = useState<Usuario | null>(null)
+  const [senhaAtual, setSenhaAtual] = useState("")
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     loadData()
@@ -120,13 +136,11 @@ export default function PainelAdmin({ onVoltar }: PainelAdminProps) {
         return
       }
 
-      const usuario: Usuario = {
-        id: Date.now().toString(),
+      const usuario: Omit<Usuario, "id" | "criadoEm"> = {
         nome: novoUsuario.nome,
         passaporte: novoUsuario.passaporte,
         senha: novoUsuario.senha,
         tipo: novoUsuario.tipo,
-        criadoEm: new Date().toISOString(),
         ativo: true,
       }
 
@@ -266,6 +280,59 @@ export default function PainelAdmin({ onVoltar }: PainelAdminProps) {
         return <Wifi className="h-4 w-4 text-yellow-400 animate-pulse" />
       case "offline":
         return <Wifi className="h-4 w-4 text-red-400" />
+    }
+  }
+
+  const salvarEdicaoUsuario = async () => {
+    if (!editandoUsuario) return
+    if (!editandoUsuario.nome || !editandoUsuario.passaporte || !editandoUsuario.tipo) {
+      showNotification("erro", "Preencha todos os campos obrigatórios")
+      return
+    }
+    if (editandoUsuario.nome.length < 3) {
+      showNotification("erro", "O nome deve ter pelo menos 3 caracteres")
+      return
+    }
+    if (!validarPassaporte(editandoUsuario.passaporte)) {
+      showNotification("erro", "Passaporte deve ter entre 1 e 12 dígitos")
+      return
+    }
+    if (!senhaAtual || senhaAtual !== usuarios.find(u => u.id === editandoUsuario.id)?.senha) {
+      showNotification("erro", "Digite corretamente a senha atual para confirmar")
+      return
+    }
+
+    try {
+      const usuarioOriginal = usuarios.find(u => u.id === editandoUsuario.id)
+      if (!usuarioOriginal) {
+        showNotification("erro", "Usuário não encontrado")
+        return
+      }
+
+      const updates: any = {}
+      if (editandoUsuario.nome !== usuarioOriginal.nome) updates.nome = editandoUsuario.nome
+      if (editandoUsuario.passaporte !== usuarioOriginal.passaporte) updates.passaporte = editandoUsuario.passaporte
+      if (editandoUsuario.tipo !== usuarioOriginal.tipo) updates.tipo = editandoUsuario.tipo
+      if ((editandoUsuario.patente || "") !== (usuarioOriginal.patente || "")) updates.patente = editandoUsuario.patente || ""
+      // Troque de 'foto' para 'fotoPerfil'
+      if ((editandoUsuario.foto || "") !== (usuarioOriginal.foto || "")) updates.fotoPerfil = editandoUsuario.foto
+
+      // Só envia senha se foi preenchida e diferente da original
+      if (editandoUsuario.senha && editandoUsuario.senha.length >= 6 && editandoUsuario.senha !== usuarioOriginal.senha) {
+        updates.senha = editandoUsuario.senha
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await db.updateUsuario(editandoUsuario.id, updates)
+        await loadData()
+        showNotification("sucesso", "Usuário atualizado com sucesso!")
+      } else {
+        showNotification("sucesso", "Nada para atualizar!")
+      }
+      setEditandoUsuario(null)
+      setSenhaAtual("")
+    } catch (error) {
+      showNotification("erro", "Erro ao atualizar usuário")
     }
   }
 
@@ -522,6 +589,13 @@ export default function PainelAdmin({ onVoltar }: PainelAdminProps) {
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
+                        <Button
+                          onClick={() => setEditandoUsuario({ ...user, senha: "", foto: user.foto || "" })}
+                          size="sm"
+                          className="bg-[#26C6DA] hover:bg-[#26C6DA]/80 text-black"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -770,7 +844,133 @@ export default function PainelAdmin({ onVoltar }: PainelAdminProps) {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Edit User Modal */}
+        {editandoUsuario && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+            <div className="relative w-full max-w-xl mx-auto">
+              <Card className="bg-gray-900 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white">Editar Perfil: {editandoUsuario.nome}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col items-center gap-4">
+                    {/* Foto do usuário */}
+                    <div className="flex flex-col items-center">
+                      {editandoUsuario.foto ? (
+                        <img
+                          src={editandoUsuario.foto}
+                          alt="Foto do usuário"
+                          className="w-24 h-24 rounded-full object-cover border-2 border-[#26C6DA]"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-gray-700 flex items-center justify-center text-4xl text-white">
+                          {editandoUsuario.nome?.[0] || "?"}
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            const reader = new FileReader()
+                            reader.onload = (ev) => {
+                              setEditandoUsuario((prev) =>
+                                prev ? { ...prev, foto: ev.target?.result as string } : prev
+                              )
+                            }
+                            reader.readAsDataURL(file)
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-[#26C6DA] hover:bg-[#26C6DA]/80 text-black mt-2"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Alterar Foto
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-white">ID</Label>
+                      <Input
+                        value={editandoUsuario.id}
+                        readOnly
+                        className="bg-gray-800 border-gray-600 text-gray-400 cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white">Nome</Label>
+                      <Input
+                        value={editandoUsuario.nome}
+                        onChange={(e) =>
+                          setEditandoUsuario((prev) => prev ? { ...prev, nome: formatarNome(e.target.value) } : null)
+                        }
+                        className="bg-gray-800 border-gray-600 text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-white">Senha</Label>
+                      <Input
+                        type="text"
+                        value={editandoUsuario.senha}
+                        onChange={(e) =>
+                          setEditandoUsuario((prev) => prev ? { ...prev, senha: e.target.value } : null)
+                        }
+                        className="bg-gray-800 border-gray-600 text-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white">Patente</Label>
+                      <Input
+                        value={editandoUsuario.patente || ""}
+                        onChange={(e) =>
+                          setEditandoUsuario((prev) => prev ? { ...prev, patente: e.target.value } : null)
+                        }
+                        className="bg-gray-800 border-gray-600 text-white"
+                        placeholder="Ex: Tenente, Soldado, etc."
+                      />
+                    </div>
+                  </div>
+                  {/* Campo para senha atual */}
+                  <div className="space-y-2">
+                    <Label className="text-white">Digite a senha atual para confirmar</Label>
+                    <Input
+                      type="password"
+                      value={senhaAtual}
+                      onChange={e => setSenhaAtual(e.target.value)}
+                      className="bg-gray-800 border-gray-600 text-white"
+                      placeholder="Senha atual"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={salvarEdicaoUsuario} className="bg-[#26C6DA] hover:bg-[#26C6DA]/80 text-black">
+                      <Save className="h-4 w-4 mr-2" />
+                      Salvar
+                    </Button>
+                    <Button
+                      onClick={() => setEditandoUsuario(null)}
+                      variant="outline"
+                      className="bg-red-600 hover:bg-red-700 border-red-600 text-white"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
 }
+
+// CREATE INDEX IF NOT EXISTS idx_usuarios_criado_em ON usuarios (criado_em DESC);
