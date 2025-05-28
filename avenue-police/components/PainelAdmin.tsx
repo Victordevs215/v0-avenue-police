@@ -974,4 +974,4 @@ export default function PainelAdmin({ onVoltar }: PainelAdminProps) {
                     > )
                       Cancelar}
                     </Button>
-                  </div>
+                  </div>// CREATE INDEX IF NOT EXISTS idx_usuarios_criado_em ON usuarios (criado_em DESC);
