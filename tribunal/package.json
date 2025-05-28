@@ -1,0 +1,21 @@
+tribunal/
+│
+├── components/
+│   ├── TribunalHome.tsx
+│   ├── PoliceHome.tsx
+│   ├── TribunalDashboard.tsx
+│   └── SharedComponents/
+│       ├── Button.tsx
+│       ├── Input.tsx
+│       └── Card.tsx
+│
+├── pages/
+│   ├── index.tsx
+│   └── tribunal.tsx
+│
+├── styles/
+│   ├── globals.css
+│   └── components.css
+│
+└── lib/
+    └── database.ts

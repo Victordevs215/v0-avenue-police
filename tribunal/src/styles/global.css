@@ -1,0 +1,18 @@
+tribunal/
+│
+├── components/
+│   ├── TribunalHome.tsx
+│   ├── PoliceHome.tsx
+│   ├── TribunalPanel.tsx
+│   └── ... (outros componentes)
+│
+├── pages/
+│   ├── index.tsx
+│   ├── tribunal.tsx
+│   └── police.tsx
+│
+├── styles/
+│   └── styles.css
+│
+└── lib/
+    └── database.ts
