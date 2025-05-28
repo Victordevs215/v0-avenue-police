@@ -269,7 +269,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Image src="/avenue-logo.gif" alt="Avenue Logo" width={60} height={30} className="object-contain" />
+            <Image src="/LOGOPMA.png" alt="LOGOPMA" width={60} height={30} className="object-contain" />
             <div>
               <h1 className="text-2xl font-bold text-white">Dashboard - Avenue City</h1>
               <p className="text-[#26C6DA]">Sistema de Gestão Penal</p>
